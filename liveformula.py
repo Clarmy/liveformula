@@ -6,8 +6,10 @@ class Formula():
         self.right_terms = []
 
     def __repr__(self):
-        if self.left_terms == [] or self.right_terms == []:
-            return 'Formula: None'
+        if self.left_terms == []:
+            return 'Formula: Not Equation(lack left terms)'
+        elif self.right_terms == []:
+            return 'Formula: Not Equation(lack right terms)'
         else:
             return 'Formula: %s'%self.formula()
 
@@ -48,6 +50,32 @@ class Formula():
             else:
                 self.right_terms.extend(terms)
                 self.right_terms.sort()
+        else:
+            raise ValueError('side parameter must be selected '
+                             'from \'left\' and \'right\'')
+
+    def drop_terms(self,indexs,side):
+        '''删除项方法
+
+        输入参数
+        -------
+        indexs : `list`
+            需要删除的项的序号，例如要删除序号为1的项，则indexs参数设为[1]。
+            若要删除1、2、3项，则将indexs设置为[1,2,3]
+
+        side : `str`
+            选择要删除等号哪边的项，须从'left'和'right'中选择
+        '''
+        if side == 'left':
+            for idx in indexs:
+                for n,term in enumerate(self.left_terms):
+                    if term[0] == idx:
+                        self.left_terms.pop(n)
+        elif side == 'right':
+            for idx in indexs:
+                for n,term in enumerate(self.right_terms):
+                    if term[0] == idx:
+                        self.left_terms.pop(n)
 
     def formula(self):
         '''返回当前状态的完整公式
@@ -74,3 +102,10 @@ class Formula():
         right_terms  = [t[1] for t in self.right_terms[1:]]
         formula = left_head + ''.join(left_terms)+'=' + right_head+''.join(right_terms)
         return formula
+
+#----test-----
+fml = Formula()
+fml.add_terms([(0,'+3a'),(1,'+b')],'left')
+fml.add_terms([(0,'+14')],'right')
+fml.drop_terms([1],'left')
+fml
