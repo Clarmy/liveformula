@@ -33,11 +33,21 @@ class Formula():
         Formula: 3a+b=14
         '''
         if side == 'left':
-            self.left_terms.extend(terms)
-            self.left_terms.sort()
+            existing_index = [term[0] for term in self.left_terms]
+            for term in terms:
+                if term[0] in existing_index:
+                    raise ValueError('term %s\'s index has been existing.'%str(term))
+            else:
+                self.left_terms.extend(terms)
+                self.left_terms.sort()
         elif side == 'right':
-            self.right_terms.extend(terms)
-            self.right_terms.sort()
+            existing_index = [term[0] for term in self.right_terms]
+            for term in terms:
+                if term[0] in existing_index:
+                    raise ValueError('term %s\'s index has been existing.'%str(term))
+            else:
+                self.right_terms.extend(terms)
+                self.right_terms.sort()
 
     def formula(self):
         '''返回当前状态的完整公式
@@ -45,7 +55,7 @@ class Formula():
         示例
         ----
         >>> fml = Formula()
-        >>> fml.add_terms([(0,'+3a'),(2,'+b')],'left')
+        >>> fml.add_terms([(0,'+3a'),(1,'+b')],'left')
         >>> fml.add_terms([(0,'+14')],'right')
         >>> fml.formula()
         '3a+b=14'
