@@ -1,17 +1,55 @@
+# coding : utf-8
+from namedlist import namedlist
+
+class Term(namedlist('Term', 'position label symbol content')):
+    '''代数项对象'''
+    __slots__ = ()
+
+    def __init__(self,position=None,label=None,symbol=None,content=None):
+        self.position = position
+        self.label = label
+        self.symbol = symbol
+        self.content = content
+
+    @property
+    def __str__(self):
+        return 'Term: position=%s  '\
+               'label=$%s  symbol=%s  '\
+               'content=%s  ' % (self.position, self.label,
+                                 self.symbol,self.content)
+
+    def change_label(self,newlabel):
+        self.label = newlabel
+
+    def change_symbol(self):
+        self.symbol *= -1
+
+    def change_position(self,newpositon):
+        self.position = newpositon
+
+    def change_content(self,newcontent):
+        self.content = newcontent
+
+
 class Formula():
-    '''公式对象'''
-    def __init__(self):
-        '''初始状态，等式左右项为空'''
-        self.left_terms = []
-        self.right_terms = []
+    '''Formula对象'''
+    def __init__(self,left_terms=None,right_terms=None):
+        '''初始状态'''
+        self.left_terms = left_terms
+        for n in range(len(left_terms)):
+            self.left_terms[n].position = n
+
+        self.right_terms = right_terms
+        for n in range(len(right_terms)):
+            self.right_terms[n].position = n
 
     def __repr__(self):
-        if self.left_terms == []:
+        if not self.left_terms:
             return 'Formula: Not Equation(lack left terms)'
-        elif self.right_terms == []:
+        elif not self.right_terms:
             return 'Formula: Not Equation(lack right terms)'
         else:
-            return 'Formula: %s'%self.formula()
+            return 'Formula: %s'%self.formula
 
     def add_terms(self,terms,side):
         '''在等式中添加项
@@ -19,8 +57,7 @@ class Formula():
         输入参数
         -------
         terms : `list`
-            包含项的列表，每个项为元组格式，元组内包含两个元素，第一个元素为序号(int)，
-            第二个元素为项(str)。terms的格式类似于[(0,'+x'),(1,'+y'),(2,'+z')]
+            包含代数项的列表，每个代数项都为Term对象
 
         side : `str`
             选择要在等号的那边加入该项，该参数应从'left'和'right'两个字符串中选择。
@@ -28,28 +65,38 @@ class Formula():
 
         示例
         ---
-        >>> fml = Formula()
-        >>> fml.add_terms([(0,'+3a'),(1,'+b')],'left')
-        >>> fml.add_terms([(0,'+14')],'right')
+        >>> left_terms = [Term(symbol=1,content='x'),Term(symbol=1,content='y')]
+
+        >>> right_terms = [Term(symbol=1,content='15')]
+
+        >>> fml = Formula(left_terms,right_terms)
+
         >>> fml
-        Formula: 3a+b=14
+        Formula: x+y=15
+
+        >>> fml.add_terms([Term(symbol=-1,content='z')],side='left')
+
+        >>> fml
+        Formula: x+y-z=15
         '''
         if side == 'left':
-            existing_index = [term[0] for term in self.left_terms]
-            for term in terms:
-                if term[0] in existing_index:
-                    raise ValueError('term %s\'s index has been existing.'%str(term))
+            if self.left_terms:
+                existing_positions = [term.position for term in self.left_terms]
             else:
-                self.left_terms.extend(terms)
-                self.left_terms.sort()
+                existing_positions = []
+            self.left_terms.extend(terms)
+            for n in range(len(self.left_terms)):
+                self.left_terms[n].position = n
+
         elif side == 'right':
-            existing_index = [term[0] for term in self.right_terms]
-            for term in terms:
-                if term[0] in existing_index:
-                    raise ValueError('term %s\'s index has been existing.'%str(term))
+            if self.right_terms:
+                existing_positions = [term.position for term in self.right_terms]
             else:
-                self.right_terms.extend(terms)
-                self.right_terms.sort()
+                existing_positions = []
+            self.right_terms.extend(terms)
+            for n in range(len(self.right_terms)):
+                self.right_terms[n].position = n
+
         else:
             raise ValueError('side parameter must be selected '
                              'from \'left\' and \'right\'')
@@ -66,46 +113,64 @@ class Formula():
         side : `str`
             选择要删除等号哪边的项，须从'left'和'right'中选择
         '''
+        def standarlize_indexs(indexs,side):
+            std_indexs = []
+            for idx in indexs:
+                if idx < 0:
+                    if side == 'left':
+                        idx += len(self.left_terms)
+                    elif side == 'right':
+                        idx += len(self.right_terms)
+                    std_indexs.append(idx)
+                std_indexs.append(idx)
+            return std_indexs
+
         if side == 'left':
-            for idx in indexs:
-                for n,term in enumerate(self.left_terms):
-                    if term[0] == idx:
-                        self.left_terms.pop(n)
+            indexs = standarlize_indexs(indexs,side='left')
+            new_terms = []
+            for n, term in enumerate(self.left_terms):
+                if n not in indexs:
+                    new_terms.append(term)
+            self.left_terms = new_terms
         elif side == 'right':
-            for idx in indexs:
-                for n,term in enumerate(self.right_terms):
-                    if term[0] == idx:
-                        self.left_terms.pop(n)
+            indexs = standarlize_indexs(indexs,side='right')
+            new_terms = []
+            for n, term in enumerate(self.right_terms):
+                if n not in indexs:
+                    new_terms.append(term)
+            self.right_terms = new_terms
 
+    @property
+    def terms(self):
+        '''返回当前所有代数项'''
+        return {'left':self.left_terms,'right':self.right_terms}
+
+    @property
     def formula(self):
-        '''返回当前状态的完整公式
-
-        示例
-        ----
-        >>> fml = Formula()
-        >>> fml.add_terms([(0,'+3a'),(1,'+b')],'left')
-        >>> fml.add_terms([(0,'+14')],'right')
-        >>> fml.formula()
-        '3a+b=14'
-        '''
+        '''返回当前状态的完整公式'''
         left_term0 = self.left_terms[0]
-        if left_term0[1][0] in ['+','-']:
-            left_head = left_term0[1][1:]
+        if left_term0.symbol == 1:
+            left_head = left_term0.content
+        elif left_term0.symbol == -1:
+            left_head = '-'+left_term0.content
         else:
-            left_head = left_term0[1]
+            raise ValueError('symbol must be 1 or -1.')
+
         right_term0 = self.right_terms[0]
-        if right_term0[1][0] in ['+','-']:
-            right_head = right_term0[1][1:]
+        if right_term0.symbol == 1:
+            right_head = right_term0.content
+        elif right_term0.symbol == -1:
+            right_head = '-'+right_term0.content
         else:
-            right_head = right_term0[1]
-        left_terms = [t[1] for t in self.left_terms[1:]]
-        right_terms  = [t[1] for t in self.right_terms[1:]]
+            raise ValueError('symbol must be 1 or -1.')
+
+        sym = {1:'+',-1:'-'}
+        left_terms = [sym[term.symbol]+term.content for \
+                      term in self.left_terms[1:]]
+        right_terms  = [sym[term.symbol]+term.content for \
+                      term in self.right_terms[1:]]
         formula = left_head + ''.join(left_terms)+'=' + right_head+''.join(right_terms)
         return formula
 
-#----test-----
-fml = Formula()
-fml.add_terms([(0,'+3a'),(1,'+b')],'left')
-fml.add_terms([(0,'+14')],'right')
-fml.drop_terms([1],'left')
-fml
+if __name__ == '__main__':
+    pass
